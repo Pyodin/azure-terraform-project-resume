@@ -111,7 +111,7 @@ resource "azurerm_linux_virtual_machine" "pr-vm" {
 
   admin_ssh_key {
     username   = "adminuser"
-    public_key = file("./pr-azurekey.pub")
+    public_key = file("~/.ssh/pr-azurekey.pub")
   }
 
   os_disk {
@@ -127,12 +127,12 @@ resource "azurerm_linux_virtual_machine" "pr-vm" {
   }
 
   provisioner "local-exec" {
-      command = templatefile("${var.host_os}-ssh-script.in", {
-          hostname = self.public_ip_address,
-          user = "adminuser",
-          identityfile = "~/.ssh/pr-azurekey"
-      })
-      interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]
+    command = templatefile("${var.host_os}-ssh-script.in", {
+      hostname     = self.public_ip_address,
+      user         = "adminuser",
+      identityfile = "~/.ssh/pr-azurekey"
+    })
+    interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]
   }
 
   tags = {
@@ -141,10 +141,10 @@ resource "azurerm_linux_virtual_machine" "pr-vm" {
 }
 
 data "azurerm_public_ip" "pr-ip-data" {
-  name = azurerm_public_ip.pr-ip.name
-  resource_group_name   = azurerm_resource_group.pr-rg.name
+  name                = azurerm_public_ip.pr-ip.name
+  resource_group_name = azurerm_resource_group.pr-rg.name
 }
 
-output instance_ip_address {
-  value       = "${azurerm_linux_virtual_machine.pr-vm.name}:${data.azurerm_public_ip.pr-ip-data.ip_address}"
+output "instance_ip_address" {
+  value = "${azurerm_linux_virtual_machine.pr-vm.name}: ${data.azurerm_public_ip.pr-ip-data.ip_address}"
 }
