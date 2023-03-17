@@ -1,1 +1,2 @@
-host_os = "windows"
+host_os  = "windows"
+location = "West Europe"

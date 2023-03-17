@@ -1,4 +1,3 @@
-# We strongly recommend using the required_providers block to set the
 # Azure Provider source and version being used
 terraform {
   required_providers {
@@ -15,44 +14,44 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "pr-rg" {
-  name     = "project-resume-rg"
-  location = "West Europe"
+  name     = "dev-vm-rg"
+  location = var.location
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
 resource "azurerm_virtual_network" "pr-vn" {
-  name                = "project-resume-vn"
+  name                = "dev-vm-vn"
   resource_group_name = azurerm_resource_group.pr-rg.name
   location            = azurerm_resource_group.pr-rg.location
   address_space       = ["10.0.0.0/16"]
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
 resource "azurerm_subnet" "pr-snet" {
-  name                 = "project-resume-snet"
+  name                 = "dev-vm-snet"
   resource_group_name  = azurerm_resource_group.pr-rg.name
   virtual_network_name = azurerm_virtual_network.pr-vn.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_security_group" "pr-sg" {
-  name                = "project-resume-sg"
+  name                = "dev-vm-sg"
   location            = azurerm_resource_group.pr-rg.location
   resource_group_name = azurerm_resource_group.pr-rg.name
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
 resource "azurerm_network_security_rule" "pr-sr" {
-  name                        = "project-resume-sr"
+  name                        = "dev-vm-sr"
   resource_group_name         = azurerm_resource_group.pr-rg.name
   network_security_group_name = azurerm_network_security_group.pr-sg.name
   priority                    = 100
@@ -71,19 +70,19 @@ resource "azurerm_subnet_network_security_group_association" "pr-sga" {
 }
 
 resource "azurerm_public_ip" "pr-ip" {
-  name                    = "project-resume-pip"
+  name                    = "dev-vm-pip"
   location                = azurerm_resource_group.pr-rg.location
   resource_group_name     = azurerm_resource_group.pr-rg.name
   allocation_method       = "Dynamic"
   idle_timeout_in_minutes = 30
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
 resource "azurerm_network_interface" "pr-nic" {
-  name                = "project-resume-nic"
+  name                = "dev-vm-nic"
   location            = azurerm_resource_group.pr-rg.location
   resource_group_name = azurerm_resource_group.pr-rg.name
 
@@ -95,23 +94,23 @@ resource "azurerm_network_interface" "pr-nic" {
   }
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
 resource "azurerm_linux_virtual_machine" "pr-vm" {
-  name                  = "project-resume-vm"
+  name                  = "dev-vm-vm"
   location              = azurerm_resource_group.pr-rg.location
   resource_group_name   = azurerm_resource_group.pr-rg.name
   size                  = "Standard_B1s"
   admin_username        = "adminuser"
   network_interface_ids = [azurerm_network_interface.pr-nic.id]
 
-  custom_data = filebase64("customdata.in")
+  custom_data = filebase64("customdata.sh")
 
   admin_ssh_key {
     username   = "adminuser"
-    public_key = file("~/.ssh/pr-azurekey.pub")
+    public_key = file("~/.ssh/id_rsa.pub")
   }
 
   os_disk {
@@ -127,16 +126,16 @@ resource "azurerm_linux_virtual_machine" "pr-vm" {
   }
 
   provisioner "local-exec" {
-    command = templatefile("${var.host_os}-ssh-script.in", {
+    command = templatefile("os_files/${var.host_os}-ssh-script.in", {
       hostname     = self.public_ip_address,
       user         = "adminuser",
-      identityfile = "~/.ssh/pr-azurekey"
+      identityfile = "~/.ssh/id_rsa"
     })
     interpreter = var.host_os == "windows" ? ["Powershell", "-Command"] : ["bash", "-c"]
   }
 
   tags = {
-    environment = "project-resume"
+    environment = "dev-vm"
   }
 }
 
